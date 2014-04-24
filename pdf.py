@@ -2,12 +2,13 @@
 # coding: utf-8
 
 import argparse
+import os
 
 def make_struct(**kw):
     return argparse.Namespace(**kw)
 
 if __name__ == "__main__":
-    fpath = "~/opt/programming/pdf/adobe_supplement_iso32000.pdf"
+    fpath = os.path.expanduser("~/opt/programming/pdf/adobe_supplement_iso32000.pdf")
     
     # :TRICKY: io.open(newline='') воспримет любые 
     # окончания строк, но не работает с бинарным режимом "rb"
@@ -74,11 +75,38 @@ if __name__ == "__main__":
             print(line)
             line = next_line(fbr)
     
-    import io
-    print_lines(open("~/opt/programming/pdf/tmp/ggg", "br"))
-    
-    #with open(fpath, 'rb') as f:
-        ##head = f.readline()
+    with open(fpath, 'rb') as f:
+        #head = f.readline()
+        head = next_line(make_fbr(f))        
 
-        #assert head == b'%PDF-1.'
-        #print(head)
+        m = re.match(br"%PDF-(1\.[0-7])", head)
+        assert m
+        version = m.group(1)
+        
+        dct = [
+            ["version", version]
+        ]
+        
+        # трейлер
+        # должно хватить
+        max_trailer_size = 1000
+        f.seek(-max_trailer_size, 2)
+        buf = f.read(max_trailer_size)
+        eol_pat = r"(?:\r|\r?\n)"
+        trailer_pat = eol_pat.join([
+            "trailer",
+            r"<<(?P<t_dct>.*)>>", 
+            "startxref", 
+            r"(?P<crx_offset>\d+)", 
+            "%%EOF", 
+            "?" + r"\Z"
+        ])
+        m = re.search(bytes(trailer_pat, "utf-8"), buf)
+        assert m
+        t_dct = m.group("t_dct")
+        crx_offset = int(m.group("crx_offset"))
+        print(t_dct, crx_offset)
+        
+        import pprint
+        pprint.pprint(dct)
+        
