@@ -105,7 +105,16 @@ if __name__ == "__main__":
         assert m
         t_dct = m.group("t_dct")
         crx_offset = int(m.group("crx_offset"))
-        print(t_dct, crx_offset)
+        #print(t_dct, crx_offset)
+        
+        import pdfminer.psparser
+        import io
+        class MyParser(pdfminer.psparser.PSStackParser):
+            def flush(self):
+                self.add_results(*self.popall())
+        
+        parser = MyParser(io.StringIO("<<%s>>" % str(t_dct)))
+        (_, obj) = parser.nextobject()
         
         import pprint
         pprint.pprint(dct)
